@@ -431,7 +431,10 @@ function sync(why){
   if(!tokOK()){ idleStatus(); if(why==="start"||why==="resume"||why==="online")maybeSilent(); return Promise.resolve(); }
   SYNCING=true; setSync("","Đang đồng bộ…");
   var fid=META.fileId, w0;
-  var p=fid?getJSON(fid).then(null,function(e){ if(e.status===404){ fid=null; return null; } throw e; }):Promise.resolve(null);
+  /* file đã nhớ phải còn đúng tên và chưa bị xoá; không thì tìm lại theo tên trong thư mục */
+  var p=fid?api("https://www.googleapis.com/drive/v3/files/"+encodeURIComponent(fid)+"?fields=name,trashed").then(function(r){return r.json()})
+      .then(function(m){ if(m.trashed||m.name!==CFG.fileName){ fid=null; return null; } return getJSON(fid); })
+      .then(null,function(e){ if(e.status===404){ fid=null; return null; } throw e; }):Promise.resolve(null);
   return p.then(function(remote){
     if(remote)return remote;
     return findFile(CFG.fileName).then(function(id){ fid=id; return id?getJSON(id):null; });
